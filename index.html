@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>비상장주식 평가 시뮬레이터</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 20px; color: #1a1a2e; background: #fff; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 26px; font-weight: 800; margin: 0; color: #0f3460; text-align: center; }
+  .sub { color: #888; font-size: 13px; margin-top: 6px; text-align: center; }
+  .layout { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; margin-top: 22px; }
+  .col-result { flex: 1 1 380px; min-width: 340px; position: sticky; top: 20px; }
+  .col-input { flex: 1 1 480px; min-width: 340px; }
+  .card { background: linear-gradient(135deg, #0f3460, #16537e); border-radius: 18px; padding: 26px; color: #fff; box-shadow: 0 10px 30px rgba(15,52,96,.25); }
+  .cap { font-size: 13px; opacity: .8; }
+  .big-amt { font-size: 38px; font-weight: 800; line-height: 1.15; margin: 4px 0 2px; }
+  .big-amt span { font-size: 19px; font-weight: 600; }
+  .amt-sub { font-size: 13px; opacity: .7; margin-bottom: 16px; }
+  .total-box { background: rgba(255,255,255,.12); border-radius: 12px; padding: 16px 18px; margin-bottom: 16px; }
+  .total-box .t1 { font-size: 13px; opacity: .8; }
+  .total-box .t2 { font-size: 23px; font-weight: 800; margin-top: 4px; }
+  .badge { display: inline-block; background: rgba(255,255,255,.18); border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 700; margin-bottom: 14px; }
+  .badge.gold { background: #c9a227; color: #1a1a2e; }
+  .breakdown { background: rgba(255,255,255,.1); border-radius: 10px; padding: 14px; font-size: 13.5px; line-height: 1.85; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .row .l { opacity: .85; }
+  .row .v { font-weight: 500; text-align: right; }
+  .row.bold .v { font-weight: 800; }
+  .row.big .l { font-size: 15px; }
+  .row.big .v { font-size: 18px; font-weight: 800; }
+  .subnote { font-size: 11px; opacity: .65; padding-left: 4px; margin: -2px 0 4px; }
+  .divider { border-top: 1px solid rgba(255,255,255,.2); margin-top: 8px; padding-top: 8px; }
+  .comment { margin-top: 14px; font-size: 12.5px; opacity: .9; line-height: 1.6; }
+  .disclaimer { font-size: 11px; color: #aaa; margin-top: 14px; text-align: center; line-height: 1.6; }
+  .chartbox { background: #fff; border: 1px solid #eef1f6; border-radius: 16px; padding: 20px 16px 16px; margin-bottom: 18px; box-shadow: 0 2px 10px rgba(0,0,0,.03); }
+  .chart-title { font-size: 14px; font-weight: 800; color: #0f3460; margin-bottom: 12px; padding-left: 8px; }
+  .panel { background: #f8fafc; border-radius: 16px; padding: 22px; }
+  .sectitle { font-size: 13px; font-weight: 800; color: #0f3460; margin: 0 0 12px; padding-bottom: 6px; border-bottom: 2px solid #e2e8f0; }
+  .sectitle.mt { margin-top: 20px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .selbtn { padding: 12px 6px; cursor: pointer; border-radius: 10px; text-align: center; border: 2px solid #e2e8f0; background: #fff; color: #666; }
+  .selbtn.active { border-color: #0f3460; background: #e8eef7; color: #0f3460; }
+  .selbtn .tt { font-size: 13px; font-weight: 700; }
+  .selbtn .ts { font-size: 10.5px; font-weight: 400; margin-top: 2px; opacity: .8; }
+  .minibtn { padding: 11px 6px; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 8px; border: 2px solid #e2e8f0; background: #fff; color: #666; }
+  .minibtn.active { border-color: #0f3460; background: #e8eef7; color: #0f3460; }
+  .field { margin-bottom: 16px; }
+  .flabel { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .flabel label { font-size: 13.5px; font-weight: 700; }
+  .flabel .suffix { font-size: 11.5px; color: #aaa; }
+  input[type=text], select { width: 100%; padding: 11px 14px; font-size: 16px; font-weight: 700; border: 2px solid #e2e8f0; border-radius: 10px; color: #0f3460; background: #fff; }
+  select { font-size: 15px; font-weight: 600; }
+  input[type=range] { width: 100%; margin-top: 10px; accent-color: #0f3460; }
+  .note { font-size: 12px; color: #999; margin: 0 0 14px; line-height: 1.6; }
+  .toggle-row { display: flex; align-items: center; gap: 12px; }
+  .toggle-row span { font-size: 13.5px; font-weight: 700; }
+  .toggle-row button { margin-left: auto; padding: 8px 20px; font-size: 13px; font-weight: 700; cursor: pointer; border-radius: 20px; border: none; background: #ccc; color: #fff; }
+  .toggle-row button.on { background: #0f3460; }
+  .advbtn { width: 100%; padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; border-radius: 10px; border: 2px solid #0f3460; background: #fff; color: #0f3460; }
+  .advbtn.on { background: #0f3460; color: #fff; }
+  .infobox { background: #eef3fb; border: 1px solid #c5d6ef; border-radius: 10px; padding: 10px 12px; font-size: 11.5px; color: #2c4a73; line-height: 1.6; margin-bottom: 8px; }
+  .hide { display: none; }
+  @media (max-width: 768px) {
+    .col-result { position: static; }
+    .grid3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <h1>비상장주식 평가 시뮬레이터</h1>
+    <p class="sub">상증법 보충적 평가 · 자기주식·증감자 환산 반영 · 상담용 시뮬레이션</p>
+  </div>
+
+  <div class="layout">
+    <!-- 좌측 결과 -->
+    <div class="col-result">
+      <div class="card">
+        <div class="cap">1주당 최종 평가액</div>
+        <div class="big-amt"><span id="finalNum">0</span><span>원</span></div>
+        <div class="amt-sub" id="finalWon">0원</div>
+        <div class="total-box">
+          <div class="t1">총 회사 가치 (평가액 × 발행주식총수)</div>
+          <div class="t2" id="totalWon">0원</div>
+        </div>
+        <span class="badge" id="badge">일반법인</span>
+        <div class="breakdown" id="breakdown"></div>
+        <div class="comment" id="comment"></div>
+      </div>
+      <p class="disclaimer">
+        상담용 시뮬레이션입니다. 평가차액·영업권·추정이익 등 개별 산정은 별도 검토가 필요하며 실제 평가는 전문가 확인이 필요합니다.
+      </p>
+    </div>
+
+    <!-- 우측 입력 + 차트 -->
+    <div class="col-input">
+      <div class="chartbox">
+        <div class="chart-title">1주당 가치 비교</div>
+        <canvas id="chart" height="240"></canvas>
+      </div>
+
+      <div class="panel">
+        <div class="sectitle">법인 유형</div>
+        <div class="grid3" id="typeGroup">
+          <button class="selbtn active" data-type="general" onclick="setType('general')"><div class="tt">일반법인</div><div class="ts">손익3:자산2</div></button>
+          <button class="selbtn" data-type="realestate" onclick="setType('realestate')"><div class="tt">부동산과다</div><div class="ts">손익2:자산3</div></button>
+          <button class="selbtn" data-type="netasset" onclick="setType('netasset')"><div class="tt">특정법인</div><div class="ts">순자산100%</div></button>
+        </div>
+
+        <div class="sectitle">기본 정보 (간편)</div>
+        <div class="field">
+          <div class="flabel"><label>평가기준일 발행주식총수</label><span class="suffix">주</span></div>
+          <input type="text" id="shares" value="80,000" oninput="onText(this);calc()">
+        </div>
+        <div class="field">
+          <div class="flabel"><label>순자산가액 (영업권 포함 전)</label><span class="suffix">원</span></div>
+          <input type="text" id="netAsset" value="2,665,147,278" oninput="onText(this);syncSlider('netAsset');calc()">
+          <input type="range" id="netAsset_s" min="0" max="50000000000" step="100000000" value="2665147278" oninput="onSlider('netAsset');calc()">
+        </div>
+        <div class="field">
+          <div class="flabel"><label>영업권 평가액 (가산분)</label><span class="suffix">원</span></div>
+          <input type="text" id="goodwill" value="0" oninput="onText(this);calc()">
+        </div>
+        <div class="field hide" id="goodwillAutoBox" style="padding:11px 14px; background:#eef3fb; border:2px solid #c5d6ef; border-radius:10px;">
+          <span style="font-weight:700; color:#0f3460;">영업권 평가액 (자동): </span>
+          <span style="font-weight:800; color:#0f3460;" id="goodwillAutoVal">0원</span>
+          <span style="font-size:11.5px; color:#888; margin-left:6px;" id="goodwillAutoNote"></span>
+        </div>
+
+        <div id="incBlock">
+          <div class="sectitle mt">최근 3년 순손익액 (법인 전체)</div>
+          <p class="note">직전1년×3, 2년전×2, 3년전×1 ÷6 → 환원율 10%</p>
+          <div class="field">
+            <div class="flabel"><label>직전 1년 (×3)</label><span class="suffix">원</span></div>
+            <input type="text" id="inc1" value="437,176,968" oninput="onText(this);syncSlider('inc1');calc()">
+            <input type="range" id="inc1_s" min="-5000000000" max="20000000000" step="50000000" value="437176968" oninput="onSlider('inc1');calc()">
+          </div>
+          <div class="field">
+            <div class="flabel"><label>2년 전 (×2)</label><span class="suffix">원</span></div>
+            <input type="text" id="inc2" value="685,315,812" oninput="onText(this);syncSlider('inc2');calc()">
+            <input type="range" id="inc2_s" min="-5000000000" max="20000000000" step="50000000" value="685315812" oninput="onSlider('inc2');calc()">
+          </div>
+          <div class="field">
+            <div class="flabel"><label>3년 전 (×1)</label><span class="suffix">원</span></div>
+            <input type="text" id="inc3" value="469,657,976" oninput="onText(this);syncSlider('inc3');calc()">
+            <input type="range" id="inc3_s" min="-5000000000" max="20000000000" step="50000000" value="469657976" oninput="onSlider('inc3');calc()">
+          </div>
+        </div>
+
+        <div class="sectitle mt">최대주주 할증</div>
+        <div class="toggle-row">
+          <span>최대주주·특수관계인 주식 (20% 할증)</span>
+          <button id="tg-premium" onclick="togglePremium()">아니오</button>
+        </div>
+        <p class="note" style="margin-top:8px;">※ 중소·중견기업, 직전 3년 계속 결손 법인은 할증 배제.</p>
+
+        <!-- 고급옵션 -->
+        <div style="margin-top:18px; border-top:2px solid #e2e8f0; padding-top:16px;">
+          <button class="advbtn" id="advBtn" onclick="toggleAdv()">▼ 고급 옵션 (자기주식·증감자 조정)</button>
+        </div>
+
+        <div id="advBlock" class="hide">
+          <div class="sectitle mt">영업권 평가조서 (자동 산출)</div>
+          <div class="toggle-row">
+            <span>영업권 자동 계산 사용</span>
+            <button id="tg-gwauto" onclick="toggleGwAuto()">아니오</button>
+          </div>
+          <div id="gwFields" class="hide" style="margin-top:12px;">
+            <div class="field">
+              <div class="flabel"><label>평가기준일 자기자본</label><span class="suffix">원</span></div>
+              <input type="text" id="gwEquity" value="2,665,147,278" oninput="onText(this);syncSlider('gwEquity');calc()">
+              <input type="range" id="gwEquity_s" min="0" max="50000000000" step="100000000" value="2665147278" oninput="onSlider('gwEquity');calc()">
+            </div>
+            <div class="field">
+              <div class="flabel"><label>매입 무체재산권 상각잔액</label><span class="suffix">원</span></div>
+              <input type="text" id="gwIntangible" value="0" oninput="onText(this);calc()">
+            </div>
+            <div class="infobox">
+              영업권 = [3년 가중평균순손익 × 50% − 자기자본 × 10%] × 5년 현가계수(3.7908) − 매입무체재산권 상각잔액. 초과이익이 음수면 영업권 0(미가산). 위 '최근 3년 순손익액' 값을 사용합니다.
+            </div>
+          </div>
+
+          <div class="sectitle mt">자기주식 처리</div>
+          <div class="grid3" id="treasuryGroup">
+            <button class="minibtn active" data-tr="none" onclick="setTreasury('none')">없음</button>
+            <button class="minibtn" data-tr="cancel" onclick="setTreasury('cancel')">소각목적</button>
+            <button class="minibtn" data-tr="hold" onclick="setTreasury('hold')">일시보유</button>
+          </div>
+          <div id="treasuryFields" class="hide">
+            <div class="field">
+              <div class="flabel"><label>자기주식 수</label><span class="suffix">주</span></div>
+              <input type="text" id="treasuryShares" value="0" oninput="onText(this);calc()">
+            </div>
+            <div class="field">
+              <div class="flabel"><label>자기주식 취득가액</label><span class="suffix" id="treasuryHint">원</span></div>
+              <input type="text" id="treasuryCost" value="0" oninput="onText(this);calc()">
+            </div>
+            <div class="infobox" id="treasuryInfo"></div>
+          </div>
+
+          <div class="sectitle mt">증자·감자 조정 (3년 이내)</div>
+          <div class="grid3" id="capGroup">
+            <button class="minibtn active" data-cap="none" onclick="setCap('none')">없음</button>
+            <button class="minibtn" data-cap="increase" onclick="setCap('increase')">유상증자</button>
+            <button class="minibtn" data-cap="decrease" onclick="setCap('decrease')">유상감자</button>
+          </div>
+          <div id="capFields" class="hide">
+            <div class="field">
+              <div class="flabel"><label>증감자 직전 사업연도말 주식수</label><span class="suffix">주</span></div>
+              <input type="text" id="priorShares" value="0" oninput="onText(this);calc()">
+            </div>
+            <div class="field">
+              <div class="flabel"><label id="changeSharesLabel">증자 주식수</label><span class="suffix">주</span></div>
+              <input type="text" id="changeShares" value="0" oninput="onText(this);calc()">
+            </div>
+            <div class="field">
+              <div class="flabel"><label id="perAmountLabel">1주당 납입금액</label><span class="suffix">원</span></div>
+              <input type="text" id="perAmount" value="0" oninput="onText(this);calc()">
+            </div>
+            <div class="grid2">
+              <div>
+                <div class="flabel"><label>증감자 발생연도</label></div>
+                <select id="changeYearIdx" onchange="calc()">
+                  <option value="1">직전 1년</option>
+                  <option value="2">2년 전</option>
+                  <option value="3">3년 전</option>
+                </select>
+              </div>
+              <div>
+                <div class="flabel"><label>당해연도 경과월수</label><span class="suffix">월</span></div>
+                <input type="text" id="changeMonth" value="0" oninput="onText(this);calc()">
+              </div>
+            </div>
+            <div class="infobox" id="capInfo" style="margin-top:8px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  var type = "general", premium = false, adv = false;
+  var treasury = "none", cap = "none", gwAuto = false;
+  var chart = null;
+  var RATE = 0.1;
+  var ANNUITY_5Y = 3.790786769; // Σ 1/(1.1^n), n=1..5
+
+  function comma(n) { return Math.round(n).toLocaleString(); }
+  function won(n) {
+    n = Math.round(n);
+    if (n === 0) return "0원";
+    var neg = n < 0; n = Math.abs(n);
+    var eok = Math.floor(n / 100000000), man = Math.floor((n % 100000000) / 10000), rest = n % 10000;
+    var s = "";
+    if (eok > 0) s += eok.toLocaleString() + "억 ";
+    if (man > 0) s += man.toLocaleString() + "만 ";
+    if (rest > 0) s += rest.toLocaleString();
+    return (neg ? "−" : "") + (s.trim() || "0") + "원";
+  }
+  function val(id) {
+    var raw = (document.getElementById(id).value || "").replace(/,/g, "");
+    var neg = raw.charAt(0) === "-";
+    var n = parseFloat(raw.replace(/[^0-9]/g, "")) || 0;
+    return neg ? -n : n;
+  }
+  function onText(el) {
+    var neg = el.value.trim().charAt(0) === "-";
+    var c = el.value.replace(/[^0-9]/g, "");
+    el.value = c ? (neg ? "-" : "") + parseInt(c).toLocaleString() : "";
+  }
+  function syncSlider(id) { var s = document.getElementById(id + "_s"); if (s) { var v = val(id); s.value = Math.max(s.min, Math.min(s.max, v)); } }
+  function onSlider(id) { var s = document.getElementById(id + "_s"); document.getElementById(id).value = parseInt(s.value).toLocaleString(); }
+
+  function setType(t) {
+    type = t;
+    document.querySelectorAll("#typeGroup .selbtn").forEach(function (b) { b.className = "selbtn" + (b.getAttribute("data-type") === t ? " active" : ""); });
+    document.getElementById("incBlock").className = (t === "netasset" ? "hide" : "");
+    calc();
+  }
+  function togglePremium() {
+    premium = !premium;
+    var b = document.getElementById("tg-premium");
+    b.className = premium ? "on" : ""; b.textContent = premium ? "예" : "아니오";
+    calc();
+  }
+  function toggleAdv() {
+    adv = !adv;
+    document.getElementById("advBlock").className = adv ? "" : "hide";
+    var b = document.getElementById("advBtn");
+    b.className = "advbtn" + (adv ? " on" : "");
+    b.textContent = adv ? "▲ 고급 옵션 닫기" : "▼ 고급 옵션 (자기주식·증감자 조정)";
+  }
+  function toggleGwAuto() {
+    gwAuto = !gwAuto;
+    var b = document.getElementById("tg-gwauto");
+    b.className = gwAuto ? "on" : ""; b.textContent = gwAuto ? "예" : "아니오";
+    document.getElementById("gwFields").className = gwAuto ? "" : "hide";
+    document.getElementById("goodwill").parentElement.className = gwAuto ? "field hide" : "field";
+    document.getElementById("goodwillAutoBox").className = gwAuto ? "field" : "field hide";
+    calc();
+  }
+  function setTreasury(t) {
+    treasury = t;
+    document.querySelectorAll("#treasuryGroup .minibtn").forEach(function (b) { b.className = "minibtn" + (b.getAttribute("data-tr") === t ? " active" : ""); });
+    document.getElementById("treasuryFields").className = (t === "none" ? "hide" : "");
+    if (t !== "none") {
+      document.getElementById("treasuryHint").textContent = (t === "cancel" ? "순자산에서 차감" : "순자산에 가산");
+      document.getElementById("treasuryInfo").textContent = (t === "cancel"
+        ? "소각목적: 발행주식총수에서 차감 + 순자산가액에서 취득가 차감."
+        : "일시보유: 발행주식총수에 포함 + 취득가 자산 가산. 80% 하한 적용 시 1차방정식으로 순자산가치 재산출.");
+    }
+    calc();
+  }
+  function setCap(c) {
+    cap = c;
+    document.querySelectorAll("#capGroup .minibtn").forEach(function (b) { b.className = "minibtn" + (b.getAttribute("data-cap") === c ? " active" : ""); });
+    document.getElementById("capFields").className = (c === "none" ? "hide" : "");
+    if (c !== "none") {
+      document.getElementById("changeSharesLabel").textContent = (c === "increase" ? "증자 주식수" : "감자 주식수");
+      document.getElementById("perAmountLabel").textContent = (c === "increase" ? "1주당 납입금액" : "1주당 지급금액");
+    }
+    calc();
+  }
+  function row(l, v, cls) { return '<div class="row ' + (cls || "") + '"><span class="l">' + l + '</span><span class="v">' + v + '</span></div>'; }
+
+  function calc() {
+    var shares = val("shares"), netAssetInput = val("netAsset"), goodwillInput = val("goodwill");
+    var inc1 = val("inc1"), inc2 = val("inc2"), inc3 = val("inc3");
+    var treasuryShares = val("treasuryShares"), treasuryCost = val("treasuryCost");
+    var priorShares = val("priorShares"), changeShares = val("changeShares"),
+        perAmount = val("perAmount"), changeMonth = val("changeMonth");
+    var changeYearIdx = parseInt(document.getElementById("changeYearIdx").value) || 1;
+
+    // 영업권 자동 계산
+    var goodwill = goodwillInput;
+    if (gwAuto) {
+      var gwEquity = val("gwEquity"), gwIntangible = val("gwIntangible");
+      var gwWavg = (inc1 * 3 + inc2 * 2 + inc3 * 1) / 6;
+      var gwBase = gwWavg * 0.5 - gwEquity * RATE;
+      var gwValue = gwBase * ANNUITY_5Y - gwIntangible;
+      goodwill = Math.max(0, Math.floor(gwValue));
+      document.getElementById("goodwillAutoVal").textContent = comma(goodwill) + "원";
+      document.getElementById("goodwillAutoNote").textContent = goodwill === 0 ? "(초과이익 없음 → 미가산)" : "순자산 가산됨";
+    }
+
+    // 발행주식총수 / 순자산 조정 (자기주식)
+    var totalShares = shares;
+    var netAsset = netAssetInput + goodwill;
+    if (treasury === "cancel") { totalShares = shares - treasuryShares; netAsset = netAsset - treasuryCost; }
+    else if (treasury === "hold") { netAsset = netAsset + treasuryCost; }
+    if (totalShares <= 0) totalShares = 1;
+
+    var navPerShare = Math.floor(netAsset / totalShares);
+
+    // 환산주식수 비율
+    var convRatio = 1;
+    if (cap === "increase" && priorShares > 0) convRatio = (priorShares + changeShares) / priorShares;
+    else if (cap === "decrease" && priorShares > 0) convRatio = (priorShares - changeShares) / priorShares;
+
+    // 순손익 조정 (증감자)
+    var adjAmtFull = perAmount * changeShares * RATE;
+    var sign = cap === "increase" ? 1 : cap === "decrease" ? -1 : 0;
+    var incomes = [inc1, inc2, inc3];
+    var adj = incomes.map(function (inc, i) {
+      var yearNo = i + 1;
+      if (cap === "none" || sign === 0) return inc;
+      if (yearNo === changeYearIdx) { var months = Math.max(1, Math.ceil(changeMonth)); return inc + sign * adjAmtFull * (months / 12); }
+      else if (yearNo > changeYearIdx) return inc + sign * adjAmtFull;
+      return inc;
+    });
+
+    // 1주당 순손익 (버림) → 가중평균(버림) → 환원
+    var per1 = Math.floor(adj[0] / totalShares);
+    var per2 = Math.floor(adj[1] / totalShares);
+    var per3 = Math.floor(adj[2] / totalShares);
+    var weightedAvg = Math.floor((per1 * 3 + per2 * 2 + per3 * 1) / 6);
+    if (weightedAvg < 0) weightedAvg = 0;
+    var incPerShare = weightedAvg / RATE;
+
+    // 가중평가 + 하한 (버림)
+    var weighted, ratioLabel;
+    if (type === "realestate") { weighted = Math.floor((incPerShare * 2 + navPerShare * 3) / 5); ratioLabel = "손익2:자산3"; }
+    else { weighted = Math.floor((incPerShare * 3 + navPerShare * 2) / 5); ratioLabel = "손익3:자산2"; }
+    var floor = Math.floor(navPerShare * 0.8);
+
+    var navEq = navPerShare, floorEq = floor, eqApplied = false, supplementary;
+    if (type === "netasset") {
+      supplementary = navPerShare;
+    } else if (treasury === "hold" && treasuryShares > 0 && weighted < floor) {
+      var netExcl = netAsset - treasuryCost;
+      var denom = totalShares - 0.8 * treasuryShares;
+      navEq = denom !== 0 ? Math.floor(netExcl / denom) : navPerShare;
+      floorEq = Math.floor(navEq * 0.8);
+      eqApplied = true;
+      supplementary = Math.max(weighted, floorEq);
+    } else {
+      supplementary = Math.max(weighted, floor);
+    }
+
+    var finalPerShare = Math.floor(supplementary * (premium ? 1.2 : 1.0));
+    var totalValue = finalPerShare * totalShares;
+    var floorApplied = type !== "netasset" && weighted < (eqApplied ? floorEq : floor);
+
+    // 배지
+    var typeName = type === "netasset" ? "특정법인(순자산100%)" : type === "realestate" ? "부동산과다법인" : "일반법인";
+    var badge = document.getElementById("badge");
+    badge.textContent = typeName + (premium ? " · 할증20%" : "");
+    badge.className = "badge" + (premium ? " gold" : "");
+
+    var navUsed = eqApplied ? navEq : navPerShare;
+
+    var html = "";
+    html += row("조정 발행주식총수", comma(totalShares) + "주");
+    html += row("순자산가액", comma(netAsset) + "원");
+    html += row("1주당 순자산가치", comma(navUsed) + "원", "bold");
+    if (eqApplied) html += '<div class="subnote">└ 일시보유 자기주식 1차방정식 적용</div>';
+    if (type !== "netasset") {
+      html += row("3년 가중평균 순손익(1주)", comma(weightedAvg) + "원");
+      html += row("1주당 순손익가치", comma(incPerShare) + "원", "bold");
+      html += '<div class="subnote">└ 가중평균 ÷ 환원율 10%</div>';
+      html += row("가중평가 (" + ratioLabel + ")", comma(weighted) + "원");
+      html += row("순자산 80% 하한", comma(eqApplied ? floorEq : floor) + "원");
+    }
+    html += '<div class="divider">' + row("보충적 평가액 (1주)", comma(supplementary) + "원", "bold") + '</div>';
+    if (premium) html += row("최대주주 할증 (20%)", "+ " + comma(supplementary * 0.2) + "원");
+    html += '<div class="divider">' + row("최종 1주당 평가액", comma(finalPerShare) + "원", "bold big") + '</div>';
+
+    var comment = type === "netasset" ? "💡 특정법인으로 순자산가치로만 평가합니다."
+      : floorApplied ? "💡 가중평가액이 순자산 80% 하한보다 낮아 하한액이 적용되었습니다."
+      : "💡 가중평균액이 적용되었습니다.";
+    if (convRatio !== 1) comment += " 증감자 환산비율 " + convRatio.toFixed(4) + " 적용.";
+
+    document.getElementById("finalNum").textContent = comma(finalPerShare);
+    document.getElementById("finalWon").textContent = won(finalPerShare);
+    document.getElementById("totalWon").textContent = won(totalValue);
+    document.getElementById("breakdown").innerHTML = html;
+    document.getElementById("comment").innerHTML = comment;
+
+    // 증감자 안내
+    if (cap !== "none") {
+      document.getElementById("capInfo").innerHTML =
+        "순손익 조정액 = " + (cap === "increase" ? "납입" : "지급") + "금액 × " + (cap === "increase" ? "증가" : "감소") +
+        "주식수 × 10%. 발생 사업연도는 월할(1개월 미만 1개월), 그 이전 연도는 전액 " +
+        (cap === "increase" ? "가산" : "차감") + ". 환산주식수 비율 " + convRatio.toFixed(4) + " 적용.";
+    }
+
+    updateChart(navUsed, incPerShare, finalPerShare);
+  }
+
+  function updateChart(nav, inc, fin) {
+    var data = [Math.round(nav), Math.round(inc), Math.round(fin)];
+    if (chart) { chart.data.datasets[0].data = data; chart.update(); return; }
+    var ctx = document.getElementById("chart").getContext("2d");
+    chart = new Chart(ctx, {
+      type: "bar",
+      data: { labels: ["순자산가치", "순손익가치", "최종 평가액"], datasets: [{ data: data, backgroundColor: ["#16537e", "#5b8fd6", "#c9a227"], borderRadius: 8, maxBarThickness: 90 }] },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (c) { return comma(c.parsed.y) + "원"; } } } },
+        scales: {
+          y: { ticks: { callback: function (v) { return v >= 10000 ? (v / 10000).toLocaleString() + "만" : v; }, font: { size: 11 }, color: "#999" }, grid: { color: "#eee" } },
+          x: { ticks: { font: { size: 13, weight: "600" }, color: "#555" }, grid: { display: false } },
+        },
+        animation: { duration: 500 },
+      },
+    });
+  }
+
+  calc();
+</script>
+</body>
+</html>
